@@ -262,29 +262,32 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 bill.AlwaysOnTop = true
                 bill.Size = UDim2.new(0, 200, 0, 50)
                 bill.StudsOffset = Vector3.new(0, 3, 0)
-                local label = Instance.new("TextLabel", bill)
-                label.Name = "Text"
-                label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.Font = Enum.Font.SourceSansBold
-                label.TextSize = 14
-                label.TextStrokeTransparency = 0
+                local newLabel = Instance.new("TextLabel", bill)
+                newLabel.Name = "Text"
+                newLabel.BackgroundTransparency = 1
+                newLabel.Size = UDim2.new(1, 0, 1, 0)
+                newLabel.Font = Enum.Font.SourceSansBold
+                newLabel.TextSize = 14
+                newLabel.TextStrokeTransparency = 0
             end
 
-            local label = bill.Text
-            if _G.ESP_Name or _G.ESP_Roles or _G.ESP_Dist then
-                label.Visible = true
-                label.TextColor3 = color
-                
-                -- Montando o texto baseado no que está ativado
-                local displayText = ""
-                if _G.ESP_Name then displayText = displayText .. plr.Name .. "\n" end
-                if _G.ESP_Roles then displayText = displayText .. "[" .. role .. "] " end
-                if _G.ESP_Dist then displayText = displayText .. "(" .. distance .. "m)" end
-                
-                label.Text = displayText
-            else
-                label.Visible = false
+            -- CONSERTO AQUI: Usando FindFirstChild para evitar o crash silencioso que parava o ESP
+            local label = bill:FindFirstChild("Text")
+            if label then
+                if _G.ESP_Name or _G.ESP_Roles or _G.ESP_Dist then
+                    label.Visible = true
+                    label.TextColor3 = color
+                    
+                    -- Montando o texto baseado no que está ativado
+                    local displayText = ""
+                    if _G.ESP_Name then displayText = displayText .. plr.Name .. "\n" end
+                    if _G.ESP_Roles then displayText = displayText .. "[" .. role .. "] " end
+                    if _G.ESP_Dist then displayText = displayText .. "(" .. distance .. "m)" end
+                    
+                    label.Text = displayText
+                else
+                    label.Visible = false
+                end
             end
 
             -- 2. Lógica do ESP Box (Highlight)
