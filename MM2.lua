@@ -19,10 +19,10 @@ _G.GodMode = false
 
 -- ABAS (Mantidas e adicionado Dump)
 local Tab1 = Window:NewTab("Visuals (ESP)")
-local Tab2 = Window:NewTab("Combat (Six Aim)")
+local Tab2 = Window:NewTab("Combat")
 local Tab3 = Window:NewTab("Auto-Farm")
-local Tab4 = Window:NewTab("Movement/God")
-local Tab5 = Window:NewTab("Dump (Logs)") -- Nova Aba solicitada
+local Tab4 = Window:NewTab("Movement")
+local Tab5 = Window:NewTab("Dump ") -- Nova Aba solicitada
 local Tab6 = Window:NewTab("Settings")
 
 -- [[ ABA DUMP - JANELA DE PROCESSO (SÓ ACRESCENTADO) ]]
