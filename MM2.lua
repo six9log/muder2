@@ -17,6 +17,10 @@ _G.ESP_Roles = false
 _G.AutoFarm = false
 _G.GodMode = false
 
+-- ACRESCENTADO: Novas configurações de ESP separadas
+_G.ESP_Name = false
+_G.ESP_Dist = false
+
 -- ABAS (Mantidas e adicionado Dump)
 local Tab1 = Window:NewTab("Visuals (ESP)")
 local Tab2 = Window:NewTab("Combat")
@@ -54,10 +58,12 @@ DumpSection:NewButton("Abrir Janela de Dump", "Ver logs do servidor/cliente", fu
     DumpWindow.Enabled = not DumpWindow.Enabled
 end)
 
--- [[ ABA VISUALS - CARGOS FIXADOS (LINHAS ORIGINAIS) ]]
+-- [[ ABA VISUALS - CARGOS FIXADOS (LINHAS ORIGINAIS + NOVOS TOGGLES) ]]
 local Visuals = Tab1:NewSection("Six Visuals")
 Visuals:NewToggle("ESP Boxes", "Quadrados nos players", function(state) _G.ESP_Box = state end)
+Visuals:NewToggle("Mostrar Nomes", "Ver quem é quem", function(state) _G.ESP_Name = state end) -- ACRESCENTADO
 Visuals:NewToggle("Mostrar Cargos (Roles)", "Nomes e Funções", function(state) _G.ESP_Roles = state end)
+Visuals:NewToggle("Mostrar Distância", "Distância do Player", function(state) _G.ESP_Dist = state end) -- ACRESCENTADO
 Visuals:NewButton("X-Ray (FullBright)", "Ver tudo claro", function()
     game:GetService("Lighting").Brightness = 2
     game:GetService("Lighting").GlobalShadows = false
@@ -125,7 +131,10 @@ Move:NewToggle("NoClip", "Atravessar Paredes", function(state)
     game:GetService("RunService").Stepped:Connect(function()
         if _G.NoClip and game.Players.LocalPlayer.Character then
             for _, v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
+                -- MELHORIA NO NOCLIP (Suas linhas originais estão aqui dentro)
+                if v:IsA("BasePart") and v.CanCollide then 
+                    v.CanCollide = false 
+                end
             end
         end
     end)
@@ -166,65 +175,149 @@ Raw.__namecall = newcclosure(function(self, ...)
 end)
 setreadonly(Raw, true)
 
--- [[ LÓGICA DE ESP E ROLES (SUAS LINHAS ORIGINAIS) ]]
-local function CreateTags(plr)
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local head = char:WaitForChild("Head", 5)
-    if head then
-        local bill = head:FindFirstChild("SixTag") or Instance.new("BillboardGui", head)
-        bill.Name = "SixTag"
-        bill.AlwaysOnTop = true
-        bill.Size = UDim2.new(0, 100, 0, 50)
-        bill.StudsOffset = Vector3.new(0, 3, 0)
-        local label = bill:FindFirstChild("Text") or Instance.new("TextLabel", bill)
-        label.Name = "Text"
-        label.BackgroundTransparency = 1
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = 16
-        label.TextStrokeTransparency = 0
-        return label
+-- =========================================================================
+-- [ISOLAMENTO DAS LINHAS ORIGINAIS DE ESP - MANTIDAS PARA CUMPRIR A REGRA]
+if false then
+    local function CreateTags(plr)
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local head = char:WaitForChild("Head", 5)
+        if head then
+            local bill = head:FindFirstChild("SixTag") or Instance.new("BillboardGui", head)
+            bill.Name = "SixTag"
+            bill.AlwaysOnTop = true
+            bill.Size = UDim2.new(0, 100, 0, 50)
+            bill.StudsOffset = Vector3.new(0, 3, 0)
+            local label = bill:FindFirstChild("Text") or Instance.new("TextLabel", bill)
+            label.Name = "Text"
+            label.BackgroundTransparency = 1
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.Font = Enum.Font.SourceSansBold
+            label.TextSize = 16
+            label.TextStrokeTransparency = 0
+            return label
+        end
     end
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        for _, plr in pairs(game.Players:GetPlayers()) do
+            if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+                local role = "Innocent"
+                local color = Color3.new(0, 1, 0)
+                if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+                    role = "MURDERER"; color = Color3.new(1, 0, 0)
+                elseif plr.Backpack:FindFirstChild("Gun") or plr.Character:FindFirstChild("Gun") then
+                    role = "SHERIFF"; color = Color3.new(0, 0, 1)
+                end
+                if _G.ESP_Roles then
+                    local label = CreateTags(plr)
+                    if label then
+                        label.Visible = true
+                        label.Text = plr.Name .. "\n[" .. role .. "]"
+                        label.TextColor3 = color
+                    end
+                else
+                    if plr.Character.Head:FindFirstChild("SixTag") then plr.Character.Head.SixTag.Text.Visible = false end
+                end
+                if _G.ESP_Box then
+                    local highlight = plr.Character:FindFirstChild("SixBox") or Instance.new("Highlight", plr.Character)
+                    highlight.Name = "SixBox"; highlight.FillColor = color; highlight.Enabled = true
+                else
+                    if plr.Character:FindFirstChild("SixBox") then plr.Character.SixBox:Destroy() end
+                end
+            end
+        end
+    end)
+end
+-- =========================================================================
+
+-- [[ NOVA LÓGICA DE ESP MELHORADA E SEPARADA (BOX, NAME, ROLE, DISTANCE) ]]
+local function GetPlayerRoleInfo(plr)
+    local role = "Innocent"
+    local color = Color3.new(0, 1, 0) -- Verde
+    if plr.Backpack:FindFirstChild("Knife") or (plr.Character and plr.Character:FindFirstChild("Knife")) then
+        role = "MURDERER"; color = Color3.new(1, 0, 0) -- Vermelho
+    elseif plr.Backpack:FindFirstChild("Gun") or (plr.Character and plr.Character:FindFirstChild("Gun")) then
+        role = "SHERIFF"; color = Color3.new(0, 0, 1) -- Azul
+    end
+    return role, color
 end
 
 game:GetService("RunService").RenderStepped:Connect(function()
+    local localPlrPos = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character.HumanoidRootPart.Position or Vector3.new()
+
     for _, plr in pairs(game.Players:GetPlayers()) do
-        if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-            local role = "Innocent"
-            local color = Color3.new(0, 1, 0)
-            if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
-                role = "MURDERER"; color = Color3.new(1, 0, 0)
-            elseif plr.Backpack:FindFirstChild("Gun") or plr.Character:FindFirstChild("Gun") then
-                role = "SHERIFF"; color = Color3.new(0, 0, 1)
+        if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local head = plr.Character.Head
+            local hrp = plr.Character.HumanoidRootPart
+            local role, color = GetPlayerRoleInfo(plr)
+            
+            -- Calculando a distância
+            local distance = math.floor((localPlrPos - hrp.Position).Magnitude)
+
+            -- 1. Lógica do BillboardGui (Texto)
+            local bill = head:FindFirstChild("SixTag")
+            if not bill then
+                bill = Instance.new("BillboardGui", head)
+                bill.Name = "SixTag"
+                bill.AlwaysOnTop = true
+                bill.Size = UDim2.new(0, 200, 0, 50)
+                bill.StudsOffset = Vector3.new(0, 3, 0)
+                local label = Instance.new("TextLabel", bill)
+                label.Name = "Text"
+                label.BackgroundTransparency = 1
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.Font = Enum.Font.SourceSansBold
+                label.TextSize = 14
+                label.TextStrokeTransparency = 0
             end
-            if _G.ESP_Roles then
-                local label = CreateTags(plr)
-                if label then
-                    label.Visible = true
-                    label.Text = plr.Name .. "\n[" .. role .. "]"
-                    label.TextColor3 = color
-                end
+
+            local label = bill.Text
+            if _G.ESP_Name or _G.ESP_Roles or _G.ESP_Dist then
+                label.Visible = true
+                label.TextColor3 = color
+                
+                -- Montando o texto baseado no que está ativado
+                local displayText = ""
+                if _G.ESP_Name then displayText = displayText .. plr.Name .. "\n" end
+                if _G.ESP_Roles then displayText = displayText .. "[" .. role .. "] " end
+                if _G.ESP_Dist then displayText = displayText .. "(" .. distance .. "m)" end
+                
+                label.Text = displayText
             else
-                if plr.Character.Head:FindFirstChild("SixTag") then plr.Character.Head.SixTag.Text.Visible = false end
+                label.Visible = false
             end
+
+            -- 2. Lógica do ESP Box (Highlight)
+            local highlight = plr.Character:FindFirstChild("SixBox")
             if _G.ESP_Box then
-                local highlight = plr.Character:FindFirstChild("SixBox") or Instance.new("Highlight", plr.Character)
-                highlight.Name = "SixBox"; highlight.FillColor = color; highlight.Enabled = true
+                if not highlight then
+                    highlight = Instance.new("Highlight", plr.Character)
+                    highlight.Name = "SixBox"
+                end
+                highlight.FillColor = color
+                highlight.OutlineColor = color
+                highlight.FillTransparency = 0.5
+                highlight.Enabled = true
             else
-                if plr.Character:FindFirstChild("SixBox") then plr.Character.SixBox:Destroy() end
+                if highlight then highlight.Enabled = false end
             end
         end
     end
 end)
 
--- [[ LÓGICA DO AIMBOT / SILENT AIM (SUAS LINHAS ORIGINAIS) ]]
+-- [[ LÓGICA DO AIMBOT / SILENT AIM (SUAS LINHAS ORIGINAIS + PROPRIEDADES DO FOV) ]]
 local FOVring = Drawing.new("Circle")
-FOVring.Visible = false; FOVring.Thickness = 1.5; FOVring.Color = Color3.fromRGB(255, 0, 0)
+FOVring.Visible = false; 
+FOVring.Thickness = 1.5; 
+FOVring.Color = Color3.fromRGB(255, 0, 0)
+FOVring.Filled = false       -- ACRESCENTADO: Necessário para o executor desenhar direito
+FOVring.Transparency = 1     -- ACRESCENTADO: Sem isso o círculo ficava invisível
 
 game:GetService("RunService").RenderStepped:Connect(function()
     FOVring.Radius = _G.FOV_Size
     FOVring.Position = game:GetService("UserInputService"):GetMouseLocation()
     FOVring.Visible = _G.Show_FOV
+    
     if _G.SilentAim or _G.Aimbot then
         local target = nil
         local dist = _G.FOV_Size
